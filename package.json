@@ -1,0 +1,36 @@
+{
+  "name": "telegram-ocr-bot",
+  "version": "1.0.0",
+  "description": "a simple exmple for a telegram OCR bot",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node src/bot.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hoseinhamzei/telegram-ocr-bot-example-nodejs.git"
+  },
+  "keywords": [
+    "bot",
+    "telegram",
+    "nodejs",
+    "typescript"
+  ],
+  "author": "mhdev",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hoseinhamzei/telegram-ocr-bot-example-nodejs/issues"
+  },
+  "homepage": "https://github.com/hoseinhamzei/telegram-ocr-bot-example-nodejs#readme",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "telegraf": "^4.16.3",
+    "tesseract.js": "^5.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}
