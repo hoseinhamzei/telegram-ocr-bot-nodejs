@@ -1,2 +1,2 @@
 # telegram-nodejs-bot-example
-basic telegram node.js bot example using node.js and typescript
+simple telegram node.js + typescript OCR bot example using [telegraf.js](https://github.com/telegraf/telegraf)
