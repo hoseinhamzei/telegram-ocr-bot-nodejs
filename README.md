@@ -29,4 +29,3 @@ Released under the MIT License.
 
 ## Contributing
 Contributions and new features are welcome! If you'd like to contribute to the bot, please fork this repository and submit a pull request.
-"""
