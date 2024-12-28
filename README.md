@@ -1,6 +1,5 @@
 # OCR Bot
 
-================
 
 A Telegram bot that extracts text from images created using nodejs.
 
