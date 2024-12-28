@@ -1,15 +1,19 @@
-import { Telegraf, Markup } from 'telegraf';
-import { recognize } from 'tesseract.js';
-import dotenv from 'dotenv';
+import { Telegraf, Markup } from "telegraf";
+import { message } from "telegraf/filters";
+import { recognize } from "tesseract.js";
+import dotenv from "dotenv";
 //
-import { LANGUAGES } from './languages';
+import { LANGUAGES } from "./utils/languages";
+import { replies } from "./utils/constants";
+
+console.log("OCR bot is starting...");
 
 dotenv.config();
 
-// load your bot token (get your token from the BotFather bot in telegram and set it as environment variable)
+// load your bot token (get your token from the BotFather bot in telegram and set it as environment variable in the .env file)
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
-  throw new Error('BOT_TOKEN is not defined in environment variables');
+  throw new Error("BOT_TOKEN is not defined in environment variables");
 }
 
 const bot = new Telegraf(BOT_TOKEN);
@@ -20,18 +24,18 @@ const userLanguages: Record<number, string> = {};
 // Start command handler
 bot.start((ctx) => {
   ctx.reply(
-    `Welcome! Send me an image, and I will extract the text from it.\n\nSelect a language for OCR using the button below.`,
+    replies.WELCOME,
     Markup.inlineKeyboard([
-      [Markup.button.callback('Set OCR Language', 'set_language')],
-      [Markup.button.callback('Help', 'help')],
+      [Markup.button.callback("Set OCR Language", "set_language")],
+      [Markup.button.callback("Help", "help")],
     ])
   );
 });
 
 // Inline keyboard for language selection
-bot.action('set_language', async (ctx) => {
+bot.action("set_language", async (ctx) => {
   ctx.reply(
-    'Choose a language for OCR:',
+    replies.SET_LANGUAGE,
     Markup.inlineKeyboard(
       LANGUAGES.map((lang) =>
         Markup.button.callback(lang.name, `lang_${lang.code}`)
@@ -39,59 +43,94 @@ bot.action('set_language', async (ctx) => {
       { columns: 2 }
     )
   );
-  ctx.answerCbQuery(); // Acknowledge callback
+  ctx.answerCbQuery();
 });
 
 // Handle language selection
 LANGUAGES.forEach((lang) => {
   bot.action(`lang_${lang.code}`, (ctx) => {
     userLanguages[ctx.from.id] = lang.code;
-    ctx.reply(`Language set to "${lang.name}". Now you can send your image.`);
-    ctx.answerCbQuery(); // Acknowledge callback
+    ctx.reply(replies.LANG_BUTTON(lang.name));
+    ctx.answerCbQuery();
   });
 });
 
 // Handle image uploads
-bot.on('photo', async (ctx) => {
+bot.on(message("photo"), async (ctx) => {
   try {
-    // Get the user's preferred language or default to English
-    const language = userLanguages[ctx.from.id] || 'eng';
-
-    // Get the highest resolution image
+    const language = userLanguages[ctx.from.id] || "eng";
     const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-
-    // Get the file URL
     const fileLink = await ctx.telegram.getFileLink(fileId);
 
-    ctx.reply(`Processing the image with language "${language}"... Please wait.`);
+    ctx.reply(replies.PROCESSING_IMAGE);
 
     // Perform OCR using Tesseract.js
     const result = await recognize(fileLink.toString(), language);
 
     if (result.data.text.trim()) {
-      ctx.reply(`Extracted Text:\n${result.data.text}`);
+      ctx.reply(replies.EXTRACTED_TEXT(result.data.text));
     } else {
-      ctx.reply('No text was detected in the image.');
+      ctx.reply(replies.NO_TEXT_DETECTED);
     }
   } catch (error) {
-    console.error('Error during OCR processing:', error);
-    ctx.reply('An error occurred while processing the image. Please try again.');
+    console.error("Error during OCR processing:", error);
+    ctx.reply(replies.ERROR_OCR_PROCESSING);
+  }
+});
+
+// handle image file
+bot.on(message("document"), async (ctx, next) => {
+  try {
+    const language = userLanguages[ctx.from.id] || "eng";
+    const fileId = ctx.message.document.file_id;
+    const fileLink = await ctx.telegram.getFileLink(fileId);
+
+    // check if file is image
+    if (
+      ctx?.message?.document?.mime_type &&
+      ctx?.message?.document?.mime_type.startsWith("image/") &&
+      // handle svg files
+      !ctx?.message?.document?.mime_type.startsWith("image/svg+xml")
+    ) {
+      ctx.reply(replies.PROCESSING_IMAGE);
+
+      // Perform OCR using Tesseract.js
+      const result = await recognize(fileLink.toString(), language);
+
+      if (result.data.text.trim()) {
+        ctx.reply(replies.EXTRACTED_TEXT(result.data.text));
+      } else {
+        ctx.reply(replies.NO_TEXT_DETECTED);
+      }
+    } else {
+      ctx.reply(replies.NOT_AN_IMAGE);
+    }
+  } catch (error) {
+    console.error("Error during OCR processing:", error);
+    ctx.reply(replies.ERROR_OCR_PROCESSING);
+    return next();
   }
 });
 
 // Help command handler via inline button
-bot.action('help', (ctx) => {
-  ctx.reply(
-    `Commands:\n\n1. Send an image to extract text.\n2. Use the "Set OCR Language" button to choose a language.`
-  );
-  ctx.answerCbQuery(); // Acknowledge callback
+bot.action("help", (ctx) => {
+  ctx.reply(replies.HELP);
+  ctx.answerCbQuery();
 });
 
 // Gracefully stop the bot on SIGINT or SIGTERM
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+process.once("SIGINT", () => bot.stop("SIGINT"));
+process.once("SIGTERM", () => bot.stop("SIGTERM"));
 
 // Launch the bot
-bot.launch().then(() => {
-  console.log('OCR bot is running...');
-});
+bot
+  .launch()
+  .then(() => {
+    console.log("OCR bot is running...");
+  })
+  .catch((error) => {
+    console.error("Error starting the bot:", error);
+
+    // Gracefully stop the bot on error
+    process.exit(1);
+  });
